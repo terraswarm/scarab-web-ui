@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+
+<script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
+<script src="http://cdn.robotwebtools.org/threejs/current/three.js"></script>
+<script src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
+<script src="http://cdn.robotwebtools.org/roslibjs/current/roslib.js"></script>
+<script src="/static/js/ros3d.js"></script>
+
+<script>
+  /**
+   * Setup all visualization elements when the page is loaded.
+   */
+  function init() {
+
+    // See if the url was passed in the GET string
+    var url = get_url_parameter('url') || 'localhost:9090';
+    $('#ipport').val(url);
+
+    $('#setipport').click(function () {
+
+      var url = $('#ipport').val();
+      $('#markers').html('');
+
+      // Connect to ROS.
+      var ros = new ROSLIB.Ros({
+        url : 'ws://' + url
+      });
+
+      ros.on('error', function (err) {
+        console.log('error: err');
+        $('#markers').text('ERROR: Could not connect to ROS bridge.');
+      });
+
+      ros.on('connection', function () {
+        console.log('connected!')
+
+
+        // Create the main viewer.
+        var viewer = new ROS3D.Viewer({
+          divID : 'markers',
+          width : 1500,
+          height : 1000,
+          antialias : true
+        });
+
+        // Setup a client to listen to TFs.
+        var tfClient = new ROSLIB.TFClient({
+          ros : ros,
+          angularThres : 0.01,
+          transThres : 0.01,
+          rate : 10.0,
+          fixedFrame : '/tf'
+        });
+
+        var mapClient = new ROS3D.OccupancyGridClient({
+          ros : ros,
+          topic : '/map',
+          rootObject : viewer.scene
+        });
+
+        // Setup the marker client.
+        var imClient = new ROS3D.PoseClient({
+          ros : ros,
+          tfClient : tfClient,
+          topic : '/scarab0/gt_pose',
+          rootObject : viewer.scene
+        });
+
+      });
+
+    });
+  }
+
+  function get_url_parameter (sParam) {
+    var sPageURL = window.location.search.substring(1);
+    var sURLVariables = sPageURL.split('&');
+    for (var i = 0; i < sURLVariables.length; i++) {
+      var sParameterName = sURLVariables[i].split('=');
+      if (sParameterName[0] == sParam) {
+        return sParameterName[1];
+      }
+    }
+  }
+</script>
+</head>
+
+<body onload="init()">
+  <h1>Where is our Scarab?</h1>
+  <div>
+    Enter the URL to stream from: ws://<input type="text" id="ipport" value="localhost:9090"><input type="button" id="setipport" value="Load">
+  </div>
+  <div id="markers"></div>
+</body>
+</html>
