@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8" />
 
+<title>Where is the robot?</title>
+
 <script src="http://code.jquery.com/jquery-2.1.4.min.js"></script>
 <script src="http://cdn.robotwebtools.org/threejs/current/three.js"></script>
 <script src="http://cdn.robotwebtools.org/EventEmitter2/current/eventemitter2.min.js"></script>
@@ -18,11 +20,18 @@
     // See if the url was passed in the GET string
     var url = get_url_parameter('url') || 'localhost:9090';
     $('#ipport').val(url);
+    var name = get_url_parameter('name') || 'scarab';
+    $('#name').val(name);
 
-    $('#setipport').click(function () {
+    $('#go').click(function () {
 
       var url = $('#ipport').val();
       $('#markers').html('');
+
+      var name = $('#name').val();
+      $('#header').text('Where is ' + name + '?');
+      document.title = name
+      var preface = '/' + name.toLowerCase() + '/' + name.toLowerCase();
 
       // Connect to ROS.
       var ros = new ROSLIB.Ros({
@@ -57,7 +66,7 @@
 
         var mapClient = new ROS3D.OccupancyGridClient({
           ros : ros,
-          topic : '/map',
+          topic : preface + '/map',
           rootObject : viewer.scene
         });
 
@@ -65,7 +74,7 @@
         var imClient = new ROS3D.PoseClient({
           ros : ros,
           tfClient : tfClient,
-          topic : '/scarab0/gt_pose',
+          topic : preface + '/pose_stamped',
           rootObject : viewer.scene
         });
 
@@ -88,9 +97,10 @@
 </head>
 
 <body onload="init()">
-  <h1>Where is our Scarab?</h1>
+  <h1 id="header">Where is our Scarab?</h1>
   <div>
-    Enter the URL to stream from: ws://<input type="text" id="ipport" value="localhost:9090"><input type="button" id="setipport" value="Load">
+    Enter the robot name <input type="text" id="name">
+    and the URL to stream from: ws://<input type="text" id="ipport"><input type="button" id="go" value="Load">
   </div>
   <div id="markers"></div>
 </body>
